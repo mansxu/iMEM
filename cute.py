@@ -4,8 +4,8 @@ import sys
 from xcute import cute, Skip, LiveReload
 
 cute(
-	pkg_name = "apng",
-	lint = Skip("pylint cute.py test apng", sys.version_info < (3, )),
+	pkg_name = "imem",
+	lint = Skip("pylint cute.py test imem", sys.version_info < (3, )),
 	test = [
 		"lint",
 		"pytest -x test",
