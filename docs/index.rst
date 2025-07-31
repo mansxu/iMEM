@@ -1,11 +1,11 @@
-.. currentmodule:: apng
+.. currentmodule:: imem
 
-pyAPNG API reference
+iMEM API reference
 ====================
 
-A Python module to deal with APNG file.
+A Python module to read and create iMEM files.
 
-Usage/examples can be founded at `pyAPNG's readme <https://github.com/eight04/pyAPNG>`_.
+Usage/examples can be found at `iMEM Readme <https://github.com/manxu/iMEM>`_.
 
 Functions
 ---------
@@ -14,7 +14,7 @@ Functions
 
 .. autofunction:: make_chunk
 
-.. autofunction:: make_text_chunk
+.. autofunction:: set_text
 
 Classes
 -------
@@ -30,5 +30,5 @@ Classes
 .. autoclass:: FrameControl
   :members: from_bytes, to_bytes
 
-.. autoclass:: APNG
+.. autoclass:: iMEM
   :members: open, append, append_file, from_bytes, to_bytes, from_files, save
