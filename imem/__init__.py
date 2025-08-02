@@ -1,11 +1,9 @@
 #! python3
 
-"""This is an APNG module, which can create apng file from pngs
-
-Reference:
-http://littlesvr.ca/apng/
-http://wiki.mozilla.org/APNG_Specification
-https://www.w3.org/TR/PNG/
+"""Pure Python module to manage (read and write) iMEM files, internationalized memes.
+iMEM files are technically derived from PNG files and follow the PNG specification.
+Any valid PNG reader should also read and display iMEM files correctly, except that
+only the default meme language will be displayed.
 """
 
 import struct
@@ -14,7 +12,7 @@ import io
 import zlib
 from collections import namedtuple
 
-__version__ = "0.3.4"
+__version__ = "0.0.1"
 
 PNG_SIGN = b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A"
 
@@ -53,8 +51,8 @@ def make_chunk(chunk_type, chunk_data):
 	out += chunk_data + struct.pack("!I", binascii.crc32(chunk_data) & 0xffffffff)
 	return out
 	
-def make_text_chunk(
-		type="tEXt", key="Comment", value="",
+def set_text(
+		type="tEXt", language="en-US", value="",
 		compression_flag=0, compression_method=0, lang="", translated_key=""):
 	"""Create a text chunk with a key value pair.
 	See https://www.w3.org/TR/PNG/#11textinfo for text chunk information.
@@ -63,11 +61,11 @@ def make_text_chunk(
 	
 	.. code:: python
 
-		from apng import APNG, make_text_chunk
+		from apng import iMEM, set_text
 
-		im = APNG.open("file.png")
+		im = iMEM.open("file.png")
 		png, control = im.frames[0]
-		png.chunks.append(make_text_chunk("tEXt", "Comment", "some text"))
+		png.chunks.append(set_text("tEXt", "Comment", "some text"))
 		im.save("file.png")
 
 	:arg str type: Text chunk type: "tEXt", "zTXt", or "iTXt":
@@ -266,13 +264,13 @@ class PNG:
 		"""
 		write_file(file, self.to_bytes())
 		
-class FrameControl:
+class InterControl:
 	"""A data class holding fcTL info."""
 	def __init__(self, width=None, height=None, x_offset=0, y_offset=0,
 			delay=100, delay_den=1000, depose_op=1, blend_op=0):
 		"""Parameters are assigned as object members. See
-		`https://wiki.mozilla.org/APNG_Specification 
-		<https://wiki.mozilla.org/APNG_Specification#.60fcTL.60:_The_Frame_Control_Chunk>`_
+		`https://wiki.mozilla.org/iMEM_Specification
+		<https://wiki.mozilla.org/iMEM_Specification#.60fcTL.60:_The_Frame_Control_Chunk>`_
 		for the detail of fcTL.
 		"""
 		self.width = width
@@ -303,16 +301,16 @@ class FrameControl:
 		"""
 		return cls(*struct.unpack("!IIIIHHbb", b))
 
-class APNG:
-	"""Represent an APNG image."""
+class iMEM:
+	"""Represent an iMEM image."""
 	def __init__(self, num_plays=0):
-		"""An :class:`APNG` is composed by multiple :class:`PNG` s and
-		:class:`FrameControl`, which can be inserted with :meth:`append`.
+		"""An :class:`iMEM` is composed by multiple :class:`PNG` s and
+		:class:`InterControl`, which can be inserted with :meth:`append`.
 		
 		:arg int num_plays: Number of times to loop. 0 = infinite.
 			
-		:var frames: The frames of APNG.
-		:vartype frames: list[tuple(PNG, FrameControl)]
+		:var frames: The frames of iMEM.
+		:vartype frames: list[tuple(PNG, InterControl)]
 		:var int num_plays: same as ``num_plays``.
 		"""
 		self.frames = []
@@ -322,11 +320,11 @@ class APNG:
 		"""Append one frame.
 		
 		:arg PNG png: Append a :class:`PNG` as a frame.
-		:arg dict options: The options for :class:`FrameControl`.
+		:arg dict options: The options for :class:`InterControl`.
 		"""
 		if not isinstance(png, PNG):
 			raise TypeError("Expect an instance of `PNG` but got `{}`".format(png))
-		control = FrameControl(**options)
+		control = InterControl(**options)
 		if control.width is None:
 			control.width = png.width
 		if control.height is None:
@@ -338,7 +336,7 @@ class APNG:
 		
 		:arg file: Input file.
 		:type file: path-like or file-like.
-		:arg dict options: The options for :class:`FrameControl`.
+		:arg dict options: The options for :class:`InterControl`.
 		"""
 		self.append(PNG.open_any(file), **options)
 
@@ -413,17 +411,17 @@ class APNG:
 		
 	@classmethod
 	def from_files(cls, files, **options):
-		"""Create an APNG from multiple files.
+		"""Create an iMEM from multiple files.
 		
 		This is a shortcut of::
 		
-			im = APNG()
+			im = iMEM()
 			for file in files:
 				im.append_file(file, **options)
 				
 		:arg list files: A list of filename. See :meth:`PNG.open`.
-		:arg dict options: Options for :class:`FrameControl`.
-		:rtype: APNG
+		:arg dict options: Options for :class:`InterControl`.
+		:rtype: iMEM
 		"""
 		im = cls()
 		for file in files:
@@ -432,10 +430,10 @@ class APNG:
 		
 	@classmethod
 	def from_bytes(cls, b):
-		"""Create an APNG from raw bytes.
+		"""Create an iMEM from raw bytes.
 		
-		:arg bytes b: The raw bytes of the APNG file.
-		:rtype: APNG
+		:arg bytes b: The raw bytes of the iMEM file.
+		:rtype: iMEM
 		"""
 		hdr = None
 		head_chunks = []
@@ -461,13 +459,13 @@ class APNG:
 					frame_chunks.append(end)
 					frames.append((PNG.from_chunks(frame_chunks), control))
 					frame_has_head_chunks = False
-					control = FrameControl.from_bytes(data[12:-4])
+					control = InterControl.from_bytes(data[12:-4])
 					# https://github.com/PyCQA/pylint/issues/2072
 					# pylint: disable=typecheck
 					hdr = make_chunk("IHDR", struct.pack("!II", control.width, control.height) + hdr[16:-4])
 					frame_chunks = [("IHDR", hdr)]
 				else:
-					control = FrameControl.from_bytes(data[12:-4])
+					control = InterControl.from_bytes(data[12:-4])
 			elif type_ == "IDAT":
 				if not frame_has_head_chunks:
 					frame_chunks.extend(head_chunks)
@@ -496,11 +494,11 @@ class APNG:
 		
 	@classmethod
 	def open(cls, file):
-		"""Open an APNG file.
+		"""Open an iMEM file.
 		
 		:arg file: Input file.
 		:type file: path-like or file-like.
-		:rtype: APNG
+		:rtype: iMEM
 		"""
 		return cls.from_bytes(read_file(file))
 		
