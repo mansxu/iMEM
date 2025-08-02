@@ -265,13 +265,13 @@ class PNG:
 		write_file(file, self.to_bytes())
 		
 class InterControl:
-	"""A data class holding fcTL info."""
+	"""A data class holding mCTL info."""
 	def __init__(self, width=None, height=None, x_offset=0, y_offset=0,
 			delay=100, delay_den=1000, depose_op=1, blend_op=0):
 		"""Parameters are assigned as object members. See
 		`https://wiki.mozilla.org/iMEM_Specification
-		<https://wiki.mozilla.org/iMEM_Specification#.60fcTL.60:_The_Frame_Control_Chunk>`_
-		for the detail of fcTL.
+		<https://wiki.mozilla.org/iMEM_Specification#.60mCTL.60:_The_Frame_Control_Chunk>`_
+		for the detail of mCTL.
 		"""
 		self.width = width
 		self.height = height
@@ -294,7 +294,7 @@ class InterControl:
 		
 	@classmethod
 	def from_bytes(cls, b):
-		"""Contruct fcTL info from bytes.
+		"""Contruct mCTL info from bytes.
 		
 		:arg bytes b: The length of ``b`` must be *28*, excluding sequence
 			number and CRC.
@@ -360,12 +360,12 @@ class iMEM:
 		# header
 		out.append(png.hdr)
 		
-		# acTL
-		out.append(make_chunk("acTL", struct.pack("!II", len(self.frames), self.num_plays)))
+		# iMEM
+		out.append(make_chunk("iMEM", struct.pack("!II", len(self.frames), self.num_plays)))
 		
-		# fcTL
+		# mCTL
 		if control:
-			out.append(make_chunk("fcTL", struct.pack("!I", seq) + control.to_bytes()))
+			out.append(make_chunk("mCTL", struct.pack("!I", seq) + control.to_bytes()))
 			seq += 1
 		
 		# and others...
@@ -383,9 +383,9 @@ class iMEM:
 		# FIXME: we should do some optimization to frames...
 		# for other frames
 		for png, control in self.frames[1:]:
-			# fcTL
+			# mCTL
 			out.append(
-				make_chunk("fcTL", struct.pack("!I", seq) + control.to_bytes())
+				make_chunk("mCTL", struct.pack("!I", seq) + control.to_bytes())
 			)
 			seq += 1
 			
@@ -395,9 +395,9 @@ class iMEM:
 					continue
 					
 				if type_ == "IDAT":
-					# convert IDAT to fdAT
+					# convert IDAT to mDAT
 					out.append(
-						make_chunk("fdAT", struct.pack("!I", seq) + data[8:-4])
+						make_chunk("mDAT", struct.pack("!I", seq) + data[8:-4])
 					)
 					seq += 1
 				else:
@@ -450,10 +450,10 @@ class iMEM:
 			if type_ == "IHDR":
 				hdr = data
 				frame_chunks.append((type_, data))
-			elif type_ == "acTL":
+			elif type_ == "iMEM":
 				_num_frames, num_plays = struct.unpack("!II", data[8:-4])
 				continue
-			elif type_ == "fcTL":
+			elif type_ == "mCTL":
 				if any(type_ == "IDAT" for type_, data in frame_chunks):
 					# IDAT inside chunk, go to next frame
 					frame_chunks.append(end)
@@ -471,7 +471,7 @@ class iMEM:
 					frame_chunks.extend(head_chunks)
 					frame_has_head_chunks = True
 				frame_chunks.append((type_, data))
-			elif type_ == "fdAT":
+			elif type_ == "mDAT":
 				# convert to IDAT
 				if not frame_has_head_chunks:
 					frame_chunks.extend(head_chunks)
