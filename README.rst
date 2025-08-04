@@ -79,7 +79,7 @@ Add the meme text to the PNG file:
   from imem import PNG, set_text
   
   im = PNG.open("image.png")
-  im.chunks.append(set_text(language="en", value="Peppy Farm Remembers!"))
+  im.chunks.append(set_text(lang="en", value="Peppy Farm Remembers!"))
   im.save("image.png")
     
 Documentation

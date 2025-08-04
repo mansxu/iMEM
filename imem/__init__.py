@@ -52,7 +52,7 @@ def make_chunk(chunk_type, chunk_data):
 	return out
 	
 def set_text(
-		type="tEXt", language="en-US", value="",
+		type="tEXt", value="",
 		compression_flag=0, compression_method=0, lang="", translated_key=""):
 	"""Create a text chunk with a key value pair.
 	See https://www.w3.org/TR/PNG/#11textinfo for text chunk information.

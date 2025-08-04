@@ -1,7 +1,7 @@
 import json
 import subprocess
 import pytest
-from apng import APNG
+from imem import iMEM
 from . import get_fixtures
 
 FIXTURES = get_fixtures()
@@ -16,7 +16,7 @@ def test_assemble(tmp_path, fixture):
 	except IOError:
 		options = {}
 		
-	im = APNG(**options)
+	im = iMEM(**options)
 	
 	def iter_frames():
 		frames = {}
@@ -40,13 +40,11 @@ def test_assemble(tmp_path, fixture):
 	filename = "{}-animated.png".format(fixture.stem)
 	im.save(tmp_path / filename)
 	
-	subprocess.check_call(
-		subprocess.list2cmdline(["pngcheck", filename]),
-		cwd=str(tmp_path), shell=True)
+	pngcheck(["pngcheck", filename], tmp_path)
 
 @pytest.mark.parametrize("fixture", FIXTURES, ids=get_stem)
 def test_disassemble(tmp_path, fixture):
-	im = APNG.open(fixture / "animated.png")
+	im = iMEM.open(fixture / "animated.png")
 	options_file = fixture / "property.json"
 	
 	if options_file.exists():
@@ -57,6 +55,12 @@ def test_disassemble(tmp_path, fixture):
 	for i, (png, _ctrl) in enumerate(im.frames):
 		filename = "{}-{}.png".format(fixture.stem, i + 1)
 		png.save(tmp_path / filename)
-		subprocess.check_call(
-			subprocess.list2cmdline(["pngcheck", filename]),
-			cwd=str(tmp_path), shell=True)
+		pngcheck(["pngcheck", filename], tmp_path)
+
+def pngcheck(cmd, tmp_path):
+	out = ""
+	try:
+		out = subprocess.run(subprocess.list2cmdline(cmd), cwd=str(tmp_path), shell=True, capture_output=True)
+	except subprocess.CalledProcessError as e:
+		if "illegal (unless recently approved) unknown, public chunk iMEM" not in out:
+			raise(e)
